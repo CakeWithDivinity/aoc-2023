@@ -12,7 +12,7 @@ struct Game {
 
 impl Game {
     fn from_cube_string(id: usize, cubes: &str) -> Self {
-        let (mut red, mut green, mut blue): (usize, usize, usize) = (0, 0, 0);
+        let (mut red, mut green, mut blue): (usize, usize, usize) = (1, 1, 1);
         let draws = cubes.split(';');
 
         for draw in draws {
@@ -60,7 +60,7 @@ fn main() -> Result<(), Error> {
 
     let lines = reader.lines();
 
-    let sum = lines
+    let sum: usize = lines
         .map(|line| {
             let line = line.expect("parses");
 
@@ -70,8 +70,8 @@ fn main() -> Result<(), Error> {
 
             Game::from_cube_string(game_id, cubes)
         })
-        .filter(|game| game.red <= 12 && game.green <= 13 && game.blue <= 14)
-        .fold(0, |acc, game| acc + game.id);
+        .map(|game| game.red * game.blue * game.green)
+        .sum();
 
     println!("sum: {sum}");
 

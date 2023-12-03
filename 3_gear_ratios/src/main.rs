@@ -1,49 +1,28 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Error},
 };
 
-fn has_adjacent_symbol(schematic: &Vec<Vec<char>>, line_idx: usize, c_idx: usize) -> bool {
-    let mut adj_chars: Vec<char> = vec![];
+fn get_adjacent_symbol(
+    schematic: &Vec<Vec<char>>,
+    line_idx: usize,
+    c_idx: usize,
+) -> Option<(char, usize, usize)> {
+    let mut adj_chars: Vec<(char, usize, usize)> = vec![];
 
-    let is_top = line_idx == 0;
-    let is_left = c_idx == 0;
-    let is_bottom = line_idx == schematic.len() - 1;
-    let is_right = c_idx == schematic[line_idx].len() - 1;
-
-    if !is_top {
-        if !is_left {
-            adj_chars.push(schematic[line_idx - 1][c_idx - 1]);
-        }
-
-        adj_chars.push(schematic[line_idx - 1][c_idx]);
-
-        if !is_right {
-            adj_chars.push(schematic[line_idx - 1][c_idx + 1]);
+    for &i in &[line_idx.wrapping_sub(1), line_idx, line_idx + 1] {
+        for &j in &[c_idx.wrapping_sub(1), c_idx, c_idx + 1] {
+            if i < schematic.len() && j < schematic[i].len() {
+                if i != line_idx || j != c_idx {
+                    let symbol = schematic[i][j];
+                    adj_chars.push((symbol, i, j));
+                }
+            }
         }
     }
 
-    if !is_left {
-        adj_chars.push(schematic[line_idx][c_idx - 1]);
-    }
-
-    if !is_right {
-        adj_chars.push(schematic[line_idx][c_idx + 1]);
-    }
-
-    if !is_bottom {
-        if !is_left {
-            adj_chars.push(schematic[line_idx + 1][c_idx - 1]);
-        }
-
-        adj_chars.push(schematic[line_idx + 1][c_idx]);
-
-        if !is_right {
-            adj_chars.push(schematic[line_idx + 1][c_idx + 1]);
-        }
-    }
-
-    adj_chars.iter().any(is_special_symbol)
+    adj_chars.into_iter().find(|(c, _, _)| is_special_symbol(c))
 }
 
 fn is_special_symbol(c: &char) -> bool {
@@ -63,6 +42,7 @@ fn main() -> Result<(), Error> {
         .collect();
 
     let mut numbers: Vec<usize> = vec![];
+    let mut gears: HashMap<String, Vec<usize>> = HashMap::new();
 
     for (line_idx, line) in schematic.iter().enumerate() {
         let mut c_iter = line.iter().enumerate().peekable();
@@ -70,7 +50,7 @@ fn main() -> Result<(), Error> {
         while let Some((c_idx, c)) = c_iter.next() {
             match c {
                 '0'..='9' => {
-                    let mut has_adj_symbol = has_adjacent_symbol(&schematic, line_idx, c_idx);
+                    let mut adj_sym = get_adjacent_symbol(&schematic, line_idx, c_idx);
                     let mut number = c.to_string();
 
                     while let Some((next_c_idx, next_c)) = c_iter.peek() {
@@ -80,14 +60,25 @@ fn main() -> Result<(), Error> {
 
                         number.push(**next_c);
 
-                        if !has_adj_symbol {
-                            has_adj_symbol = has_adjacent_symbol(&schematic, line_idx, *next_c_idx);
+                        if adj_sym.is_none() {
+                            adj_sym = get_adjacent_symbol(&schematic, line_idx, *next_c_idx);
                         }
 
                         c_iter.next();
                     }
 
-                    if has_adj_symbol {
+                    if let Some((c, y, x)) = adj_sym {
+                        if c == '*' {
+                            let mut gear = gears
+                                .get(&format!("x:{}y:{}", x, y))
+                                .and_then(|v| Some(v.to_vec()))
+                                .unwrap_or(vec![]);
+
+                            gear.push(number.parse().expect("number"));
+
+                            gears.insert(format!("x:{}y:{}", x, y), gear.to_vec());
+                        }
+
                         numbers.push(number.parse().expect("number"));
                     }
                 }
@@ -96,7 +87,13 @@ fn main() -> Result<(), Error> {
         }
     }
 
+    let gear_ratios = gears
+        .iter()
+        .filter(|entry| entry.1.len() == 2)
+        .map(|(_, nums)| nums.iter().product::<usize>());
+
     println!("{}", numbers.iter().sum::<usize>());
+    println!("{}", gear_ratios.sum::<usize>());
 
     Ok(())
 }

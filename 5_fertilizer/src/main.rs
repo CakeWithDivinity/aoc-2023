@@ -1,7 +1,9 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader, Error},
+    slice::Iter,
     str::FromStr,
+    usize,
 };
 
 #[derive(Debug)]
@@ -73,29 +75,28 @@ impl ConversionStep {
     }
 }
 
-fn parse_seeds(line: &str) -> Vec<usize> {
-    line.split("seeds: ")
+fn main() -> Result<(), Error> {
+    let input = File::open("test.txt")?;
+    let reader = BufReader::new(input);
+    let mut lines = reader.lines();
+
+    let seeds: Vec<usize> = lines
+        .next()
+        .unwrap()
+        .unwrap()
+        .split("seeds: ")
         .nth(1)
         .expect("seed numbers")
         .split(" ")
         .map(|num| num.parse::<usize>().expect("number"))
-        .collect()
-}
+        .collect::<Vec<usize>>()
+        .chunks(2)
+        .flat_map(|chunk| chunk[0]..chunk[0] + chunk[1])
+        .collect();
 
-fn main() -> Result<(), Error> {
-    let input = File::open("input.txt")?;
-    let reader = BufReader::new(input);
-    let mut lines = reader.lines();
-
-    let mut seeds: Vec<usize> = vec![];
     let mut conversions: Vec<ConversionStep> = vec![];
 
     while let Some(Ok(line)) = lines.next() {
-        if line.starts_with("seeds: ") {
-            seeds = parse_seeds(&line);
-            continue;
-        }
-
         if line == "" {
             continue;
         }
@@ -112,26 +113,27 @@ fn main() -> Result<(), Error> {
         conversions.push(ConversionStep::from_lines(conv_lines));
     }
 
-    let mut locations: Vec<usize> = vec![];
-    for seed in seeds {
-        let mut last_conv_result = "seed";
-        let mut last_result = seed;
+    let mut min_location: usize = usize::MAX;
 
-        while last_conv_result != "location" {
-            let conversion = conversions
-                .iter()
-                .find(|c| c.from == last_conv_result)
-                .expect(format!("conversion for {last_conv_result}").as_str());
+    for (seed_idx, seed) in seeds.iter().enumerate() {
+        let mut last_result = *seed;
+        let mut iter = conversions.iter();
 
+        while let Some(conversion) = iter.next() {
             let result = conversion.convert(last_result);
             last_result = result.0;
-            last_conv_result = result.1;
         }
 
-        locations.push(last_result);
+        if last_result < min_location {
+            min_location = last_result;
+        }
+
+        if seed_idx % 1000 == 0 {
+            println!("Processed seed {seed_idx} of {}", seeds.len());
+        }
     }
 
-    println!("{}", locations.iter().min().expect("min location"));
+    println!("{}", min_location);
 
     Ok(())
 }

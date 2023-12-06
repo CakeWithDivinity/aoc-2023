@@ -3,11 +3,12 @@ use std::{
     io::{BufRead, BufReader, Error},
 };
 
-fn extract_numbers(line: String) -> Vec<usize> {
+fn extract_numbers(line: String) -> usize {
     line.split_whitespace()
         .skip(1)
-        .map(|time| time.parse::<usize>().expect("number"))
-        .collect()
+        .collect::<String>()
+        .parse()
+        .expect("number")
 }
 
 fn calc_win_strategy_amount(time: usize, distance_record: usize) -> usize {
@@ -31,14 +32,10 @@ fn main() -> Result<(), Error> {
     let reader = BufReader::new(input);
     let mut lines = reader.lines();
 
-    let times = extract_numbers(lines.next().expect("time line").unwrap());
-    let distance_records = extract_numbers(lines.next().expect("record line").unwrap());
+    let time = extract_numbers(lines.next().expect("time line").unwrap());
+    let distance_record = extract_numbers(lines.next().expect("record line").unwrap());
 
-    let result: usize = times
-        .iter()
-        .zip(distance_records)
-        .map(|(time, distance_record)| calc_win_strategy_amount(*time, distance_record))
-        .product();
+    let result: usize = calc_win_strategy_amount(time, distance_record);
 
     println!("Result: {result}");
 

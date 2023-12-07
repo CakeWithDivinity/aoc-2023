@@ -8,13 +8,13 @@ use std::{
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
 enum WinType {
-    HighCard = 1,
-    OnePair = 2,
-    TwoPair = 3,
-    ThreeOfAKind = 4,
-    FullHouse = 5,
-    FourOfAKind = 6,
-    FiveOfAKind = 7,
+    HighCard,
+    OnePair,
+    TwoPair,
+    ThreeOfAKind,
+    FullHouse,
+    FourOfAKind,
+    FiveOfAKind,
 }
 
 #[derive(Debug)]
@@ -31,28 +31,66 @@ fn get_win_type(cards: &[Card]) -> WinType {
         *card_counts.entry(card).or_insert(0) += 1;
     }
 
-    if card_counts.values().find(|v| **v == 5).is_some() {
+    let joker_count = *card_counts.get(&Card::Jack).unwrap_or(&0);
+    card_counts.remove_entry(&Card::Jack);
+
+    if card_counts.values().any(|v| (*v + joker_count) == 5) {
         return WinType::FiveOfAKind;
     }
 
-    if card_counts.values().find(|v| **v == 4).is_some() {
+    if card_counts.values().any(|v| (*v + joker_count) == 4) {
         return WinType::FourOfAKind;
     }
 
-    if card_counts.values().find(|v| **v == 3).is_some() {
-        if card_counts.values().find(|v| **v == 2).is_some() {
-            return WinType::FullHouse;
+    let mut sorted_card_counts: Vec<(&&Card, usize)> = card_counts
+        .iter()
+        .map(|(card, card_count)| (card, *card_count))
+        .collect();
+    sorted_card_counts.sort_by(|(_, a), (_, b)| b.cmp(a));
+
+    for (card, card_count) in sorted_card_counts.iter() {
+        if *card_count > 3 {
+            // already checked
+            continue;
         }
 
-        return WinType::ThreeOfAKind;
+        if card_count + joker_count >= 3 {
+            let remaining_jokers = joker_count - (3 - card_count);
+
+            for (pair_card, pair_card_count) in card_counts.iter() {
+                if pair_card.eq(*card) {
+                    continue;
+                }
+
+                if pair_card_count + remaining_jokers >= 2 {
+                    return WinType::FullHouse;
+                }
+            }
+
+            return WinType::ThreeOfAKind;
+        }
+
+        if card_count + joker_count >= 2 {
+            let remaining_jokers = joker_count - (2 - card_count);
+
+            for (pair_card, pair_card_count) in card_counts.iter() {
+                if pair_card.eq(*card) {
+                    continue;
+                }
+
+                if pair_card_count + remaining_jokers >= 2 {
+                    return WinType::TwoPair;
+                }
+            }
+
+            return WinType::OnePair;
+        }
     }
 
-    let pair_count = card_counts.values().filter(|v| **v == 2).count();
-
-    match pair_count {
-        2 => WinType::TwoPair,
-        1 => WinType::OnePair,
-        _ => WinType::HighCard,
+    match joker_count {
+        5 => WinType::FiveOfAKind,
+        0 => WinType::HighCard,
+        _ => panic!("not possible?"),
     }
 }
 
@@ -75,19 +113,19 @@ impl FromStr for Hand {
 
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 enum Card {
-    Two = 2,
-    Three = 3,
-    Four = 4,
-    Five = 5,
-    Six = 6,
-    Seven = 7,
-    Eight = 8,
-    Nine = 9,
-    Ten = 10,
-    Jack = 11,
-    Queen = 12,
-    King = 13,
-    Ace = 14,
+    Jack,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Queen,
+    King,
+    Ace,
 }
 
 impl From<char> for Card {
@@ -142,3 +180,4 @@ fn main() -> Result<(), Error> {
 
     Ok(())
 }
+

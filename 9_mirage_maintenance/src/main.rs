@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     fs::File,
     io::{BufRead, BufReader, Error},
 };
@@ -14,7 +15,7 @@ fn main() -> Result<(), Error> {
         let numbers = line
             .split_whitespace()
             .map(|item| item.parse::<isize>().expect("number"))
-            .collect::<Vec<isize>>();
+            .collect::<VecDeque<isize>>();
 
         let mut chart = vec![numbers];
         while chart
@@ -34,21 +35,19 @@ fn main() -> Result<(), Error> {
             );
         }
 
-        chart.reverse();
-
-        for i in 0..chart.len() {
-            if i == 0 {
-                chart[i].push(0);
+        for i in (0..chart.len()).rev() {
+            if i == chart.len() - 1 {
+                chart[i].push_front(0);
                 continue;
             }
 
-            let next = chart[i].last().expect("always one item")
-                + chart[i - 1].last().expect("always one item");
+            let next = chart[i].front().expect("always one item")
+                - chart[i + 1].front().expect("always one item");
 
-            chart[i].push(next);
+            chart[i].push_front(next);
         }
 
-        sum += chart.last().unwrap().last().unwrap();
+        sum += chart.first().unwrap().front().unwrap();
     }
 
     println!("{sum}");

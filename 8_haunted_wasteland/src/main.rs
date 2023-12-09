@@ -4,13 +4,14 @@ use std::{
     io::{BufRead, BufReader, Error},
 };
 
+use num::integer::lcm;
+
 fn main() -> Result<(), Error> {
     let input = File::open("input.txt")?;
     let reader = BufReader::new(input);
     let mut lines = reader.lines();
 
     let turn_sequence = lines.next().unwrap().unwrap();
-    let turn_sequence = turn_sequence.chars().cycle();
 
     // skip empty line
     lines.next().unwrap().unwrap();
@@ -26,25 +27,34 @@ fn main() -> Result<(), Error> {
         map.insert(location.to_owned(), (left.to_owned(), right.to_owned()));
     }
 
-    let mut location = "AAA";
-    let mut steps = 0;
+    let step_count = map
+        .keys()
+        .filter(|location| location.ends_with('A'))
+        .map(|location| {
+            let mut steps: u64 = 0;
+            let mut current_location = location;
 
-    for turn in turn_sequence {
-        if location == "ZZZ" {
-            break;
-        }
+            for turn in turn_sequence.chars().cycle() {
+                if current_location.ends_with('Z') {
+                    break;
+                }
 
-        let (left, right) = map.get(location).unwrap();
+                let (left, right) = map.get(current_location).unwrap();
 
-        location = match turn {
-            'L' => left,
-            'R' => right,
-            _ => panic!("unexpected turn char {turn}"),
-        };
-        steps += 1;
-    }
+                current_location = match turn {
+                    'L' => left,
+                    'R' => right,
+                    _ => panic!("unexpected turn {turn}"),
+                };
 
-    println!("Steps: {steps}");
+                steps += 1;
+            }
+
+            steps
+        })
+        .fold(1, lcm);
+
+    println!("Steps: {step_count}");
 
     Ok(())
 }

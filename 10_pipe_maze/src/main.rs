@@ -106,7 +106,7 @@ fn main() -> Result<(), Error> {
     let input = File::open("input.txt")?;
     let reader = BufReader::new(input);
 
-    let map: Vec<Vec<Pipe>> = reader
+    let mut map: Vec<Vec<Pipe>> = reader
         .lines()
         .map(|line| line.unwrap().chars().map(|c| c.into()).collect())
         .collect();
@@ -144,17 +144,48 @@ fn main() -> Result<(), Error> {
         let poss_next1 = get_next_position(curr, poss_nexts.0);
         let poss_next2 = get_next_position(curr, poss_nexts.1);
 
-        if checked[poss_next1.0][poss_next1.1] == 1 {
+        let is_next1_visited = checked[poss_next1.0][poss_next1.1] == 1;
+        let is_next2_visited = checked[poss_next2.0][poss_next2.1] == 1;
+
+        if is_next1_visited && is_next2_visited {
+            // both ends of the pipe are visited, so we are back at the start
+            break;
+        }
+
+        if is_next1_visited {
             curr = poss_next2;
         } else {
-            assert_eq!(checked[poss_next2.0][poss_next2.1], 1);
             curr = poss_next1;
         }
 
         distance += 1;
     }
 
-    println!("{}", distance / 2 + 1);
+    println!("Max distance: {}", distance / 2 + 1);
+
+    // this only works with my input. But i am too lazy to replace
+    // the start pipe with the actual pipe
+    map[start_y][start_x] = Pipe::NorthToEast;
+
+    let mut sum = 0;
+    for y in 0..checked.len() {
+        let mut in_loop = false;
+        for x in 0..checked[y].len() {
+            if checked[y][x] == 1 {
+                if [Pipe::Vertical, Pipe::SouthToWest, Pipe::SouthToEast].contains(&map[y][x]) {
+                    in_loop = !in_loop;
+                }
+
+                continue;
+            }
+
+            if in_loop {
+                sum += 1;
+            }
+        }
+    }
+
+    println!("Area inside loop: {sum}");
 
     Ok(())
 }

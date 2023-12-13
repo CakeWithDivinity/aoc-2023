@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Error},
 };
@@ -19,13 +20,29 @@ fn parse_input(line: String) -> SpringRow {
         .map(|group| group.parse::<usize>().expect("group is number"))
         .collect::<Vec<usize>>();
 
+    let mut map = std::iter::repeat(())
+        .take(5)
+        .map(|_| format!("{map}?"))
+        .collect::<String>();
+
+    // split off last ?
+    map.truncate(map.len() - 1);
+
     SpringRow {
-        map: map.to_string(),
-        springs,
+        map,
+        springs: springs.repeat(5),
     }
 }
 
-fn calculate_max_spring_combinations(map: &[u8], springs: &[usize]) -> usize {
+fn calculate_max_spring_combinations(
+    map: &[u8],
+    springs: &[usize],
+    cache: &mut HashMap<(usize, usize), usize>,
+) -> usize {
+    if let Some(result) = cache.get(&(map.len(), springs.len())) {
+        return *result;
+    }
+
     if springs.is_empty() {
         if map.iter().any(|&entry| entry == b'#') {
             return 0;
@@ -50,7 +67,7 @@ fn calculate_max_spring_combinations(map: &[u8], springs: &[usize]) -> usize {
         }
 
         if map[i..i + group_len].iter().any(|&entry| entry == b'.') {
-            // group does not fit into rest of current map
+            // group does not fit into first part of current map
             continue;
         }
 
@@ -61,13 +78,15 @@ fn calculate_max_spring_combinations(map: &[u8], springs: &[usize]) -> usize {
 
         if map[i..].len() > group_len {
             // there are more combinations to try
-            sum += calculate_max_spring_combinations(&map[i + group_len + 1..], &springs[1..]);
+            sum +=
+                calculate_max_spring_combinations(&map[i + group_len + 1..], &springs[1..], cache);
         } else if springs.len() == 1 {
             // no more combinations to try
             sum += 1;
         }
     }
 
+    cache.insert((map.len(), springs.len()), sum);
     sum
 }
 
@@ -79,8 +98,12 @@ fn main() -> Result<(), Error> {
         .lines()
         .map(|line| parse_input(line.expect("valid line")))
         .map(|spring_row| {
-            println!("calculating {:?}", spring_row);
-            calculate_max_spring_combinations(spring_row.map.as_bytes(), &spring_row.springs)
+            let mut cache: HashMap<(usize, usize), usize> = HashMap::new();
+            calculate_max_spring_combinations(
+                spring_row.map.as_bytes(),
+                &spring_row.springs,
+                &mut cache,
+            )
         })
         .sum();
 

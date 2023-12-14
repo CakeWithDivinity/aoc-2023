@@ -1,4 +1,3 @@
-use core::num;
 use std::{
     fs::File,
     io::{BufRead, BufReader, Error},
@@ -31,15 +30,11 @@ enum Mirror {
 }
 
 fn get_mirror(map: &Vec<Vec<char>>) -> Mirror {
-    for line in map {
-        println!("{}", line.iter().collect::<String>());
-    }
-
-    if let Some(vert) = try_vertical_mirror(&map) {
+    if let Some(vert) = try_vertical_mirror(map) {
         return Mirror::Vertical(vert);
     }
 
-    if let Some(horiz) = try_horizontal_mirror(&map) {
+    if let Some(horiz) = try_horizontal_mirror(map) {
         return Mirror::Horizontal(horiz);
     }
 
@@ -57,10 +52,6 @@ fn try_vertical_mirror(map: &Vec<Vec<char>>) -> Option<usize> {
         rotated_map.push(new_row);
     }
 
-    for line in &rotated_map {
-        println!("{}", line.iter().collect::<String>());
-    }
-
     try_horizontal_mirror(&rotated_map)
 }
 
@@ -68,19 +59,20 @@ fn try_horizontal_mirror(map: &Vec<Vec<char>>) -> Option<usize> {
     for mirror_index in 1..map.len() {
         let mirror_range = std::cmp::min(mirror_index, map.len() - mirror_index);
 
-        if (1..=mirror_range).all(|compare_index| {
+        let mut wrong_mirror_count = 0;
+
+        for compare_index in 1..=mirror_range {
             let line1 = &map[mirror_index - compare_index];
             let line2 = &map[mirror_index + compare_index - 1];
 
-            dbg!(mirror_index, compare_index);
-            dbg!(line1, line2);
+            wrong_mirror_count += line1
+                .iter()
+                .zip(line2.iter())
+                .filter(|(x, y)| x != y)
+                .count();
+        }
 
-            if line1.iter().zip(line2.iter()).all(|(x, y)| x == y) {
-                return true;
-            }
-
-            false
-        }) {
+        if wrong_mirror_count == 1 {
             return Some(mirror_index);
         }
     }
@@ -96,7 +88,7 @@ fn main() -> Result<(), Error> {
 
     let result: usize = inputs
         .iter()
-        .map(|map| get_mirror(map))
+        .map(get_mirror)
         .map(|result| match result {
             Mirror::Vertical(index) => index,
             Mirror::Horizontal(index) => index * 100,

@@ -60,7 +60,12 @@ const DIRECTIONS: [Direction; 4] = [
     Direction::West,
 ];
 
-fn find_min_cost_path(map: &[Vec<char>], start_direction: Direction) -> usize {
+fn find_min_cost_path(
+    map: &[Vec<char>],
+    start_direction: Direction,
+    min_distance: usize,
+    max_distance: usize,
+) -> usize {
     let mut queue: BinaryHeap<Point> = BinaryHeap::new();
     let mut checked: Vec<Vec<Vec<Direction>>> = vec![vec![vec![]; map[0].len()]; map.len()];
     let mut costs: HashMap<(usize, usize, Direction), u32> = HashMap::new();
@@ -90,15 +95,19 @@ fn find_min_cost_path(map: &[Vec<char>], start_direction: Direction) -> usize {
 
             let (diff_y, diff_x) = direction.get_idx_diff();
             let mut cost_increase = 0;
-            for distance in 1..=3 {
-                let new_y = point.y.wrapping_add_signed(diff_y * distance);
-                let new_x = point.x.wrapping_add_signed(diff_x * distance);
+            for distance in 1..=max_distance {
+                let new_y = point.y.wrapping_add_signed(diff_y * distance as isize);
+                let new_x = point.x.wrapping_add_signed(diff_x * distance as isize);
 
                 if new_y >= map.len() || new_x >= map[0].len() {
                     break;
                 }
 
                 cost_increase += map[new_y][new_x].to_digit(10).expect("char is digit");
+
+                if distance < min_distance {
+                    continue;
+                }
 
                 let new_cost = point.cost + cost_increase;
                 let costs_entry = (new_y, new_x, direction.clone());
@@ -132,11 +141,18 @@ fn main() -> Result<(), Error> {
         .collect();
 
     let result1 = std::cmp::min(
-        find_min_cost_path(&map, Direction::East),
-        find_min_cost_path(&map, Direction::South),
+        find_min_cost_path(&map, Direction::East, 1, 3),
+        find_min_cost_path(&map, Direction::South, 1, 3),
     );
 
     println!("Part 1: {result1}");
+
+    let result2 = std::cmp::min(
+        find_min_cost_path(&map, Direction::East, 4, 10),
+        find_min_cost_path(&map, Direction::South, 4, 10),
+    );
+
+    println!("Part 2: {result2}");
 
     Ok(())
 }

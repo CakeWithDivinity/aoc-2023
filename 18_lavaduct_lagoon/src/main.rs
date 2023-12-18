@@ -21,6 +21,16 @@ impl Direction {
             Direction::South => (1, 0),
         }
     }
+
+    fn from_char(c: &char) -> Self {
+        match c {
+            '0' => Direction::East,
+            '1' => Direction::South,
+            '2' => Direction::West,
+            '3' => Direction::North,
+            _ => panic!("Invalid direction char {c}"),
+        }
+    }
 }
 
 impl FromStr for Direction {
@@ -41,7 +51,8 @@ impl FromStr for Direction {
 struct Command {
     direction: Direction,
     length: isize,
-    color: isize,
+    length_2: isize,
+    direction_2: Direction,
 }
 
 impl FromStr for Command {
@@ -52,12 +63,14 @@ impl FromStr for Command {
 
         let direction: Direction = split[0].parse().unwrap();
         let length = split[1].parse::<isize>().unwrap();
-        let color = isize::from_str_radix(&split[2][2..=7], 16).unwrap();
+        let length_2 = isize::from_str_radix(&split[2][2..=6], 16).unwrap();
+        let direction_2 = Direction::from_char(&split[2].chars().nth(7).unwrap());
 
         Ok(Command {
             direction,
             length,
-            color,
+            length_2,
+            direction_2,
         })
     }
 }
@@ -89,11 +102,11 @@ fn main() -> Result<(), Error> {
     let mut circumference: isize = 0;
 
     for command in commands {
-        let (diff_y, diff_x) = command.direction.to_idx_diff();
-        let next_y = y + diff_y * command.length;
-        let next_x = x + diff_x * command.length;
+        let (diff_y, diff_x) = command.direction_2.to_idx_diff();
+        let next_y = y + diff_y * command.length_2;
+        let next_x = x + diff_x * command.length_2;
 
-        circumference += command.length;
+        circumference += command.length_2;
         vertices.push((next_y, next_x));
 
         x = next_x;

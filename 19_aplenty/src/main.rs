@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Error},
+    ops::Range,
     str::FromStr,
 };
 
@@ -126,6 +127,17 @@ enum PartAttribute {
     S,
 }
 
+impl PartAttribute {
+    fn to_range_idx(&self) -> usize {
+        match self {
+            Self::X => 0,
+            Self::M => 1,
+            Self::A => 2,
+            Self::S => 3,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct PartRating {
     x: usize,
@@ -205,6 +217,56 @@ fn parse_input(reader: BufReader<File>) -> (HashMap<String, Workflow>, Vec<PartR
     (workflows, part_ratings)
 }
 
+fn get_workflows_ranges(
+    workflows: &HashMap<String, Workflow>,
+    ranges: &mut [Range<usize>; 4],
+    workflow: &str,
+) -> usize {
+    if workflow == "R" {
+        return 0;
+    };
+
+    if workflow == "A" {
+        return ranges
+            .iter()
+            .fold(1, |acc, curr| acc * ((curr.end) - (curr.start)));
+    }
+
+    let workflow = workflows.get(workflow).unwrap();
+
+    let mut sum = 0;
+    for rule in workflow.rules.iter() {
+        match rule {
+            Rule::AlwaysTrue(next) => {
+                sum += get_workflows_ranges(workflows, ranges, next);
+            }
+            Rule::Conditional {
+                attr,
+                operation,
+                value,
+                next,
+            } => {
+                let mut new_ranges = ranges.clone();
+
+                match operation {
+                    RuleOperation::LessThan => {
+                        ranges[attr.to_range_idx()].start = *value;
+                        new_ranges[attr.to_range_idx()].end = *value;
+                    }
+                    RuleOperation::GreaterThan => {
+                        ranges[attr.to_range_idx()].end = *value + 1;
+                        new_ranges[attr.to_range_idx()].start = *value + 1;
+                    }
+                };
+
+                sum += get_workflows_ranges(workflows, &mut new_ranges, next);
+            }
+        }
+    }
+
+    sum
+}
+
 fn main() -> Result<(), Error> {
     let input = File::open("input.txt")?;
     let reader = BufReader::new(input);
@@ -230,6 +292,11 @@ fn main() -> Result<(), Error> {
         .sum();
 
     println!("Result 1: {result_part_1}");
+
+    let result_part_2 =
+        get_workflows_ranges(&workflows, &mut [1..4001, 1..4001, 1..4001, 1..4001], "in");
+
+    println!("Result 2 {result_part_2}");
 
     Ok(())
 }
